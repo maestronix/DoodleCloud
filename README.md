@@ -26,6 +26,42 @@ DoodleCloud is a Proof-of-Concept (PoC) tool that uses Instagram's internal API 
 
 ## 🛠️ Installation
 
+### Option A: Docker (Recommended)
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/depreciating/DoodleCloud.git
+    cd DoodleCloud
+    ```
+
+2.  **Configure Environment:**
+    Copy the example environment file and edit it with your credentials:
+    ```bash
+    cp .env.example .env
+    ```
+
+    Edit `.env` with your Instagram credentials and database password:
+    ```env
+    # Instagram Credentials
+    INSTA_USER=your_username
+    INSTA_PASS=your_password
+
+    # PostgreSQL Database (automatically configured)
+    DB_NAME=doodlecloud
+    DB_USER=doodlecloud
+    DB_PASS=your_secure_password
+    ```
+
+3.  **Start with Docker Compose:**
+    ```bash
+    docker-compose up -d
+    ```
+
+4.  **Access the GUI:**
+    Open your browser to: `http://localhost:5000`
+
+### Option B: Manual Installation
+
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/depreciating/DoodleCloud.git
@@ -54,7 +90,33 @@ DoodleCloud is a Proof-of-Concept (PoC) tool that uses Instagram's internal API 
 
 ## 🖥️ Usage
 
-### Option A: Graphical Interface (GUI)
+### With Docker
+
+Once running with `docker-compose up -d`:
+
+1.  **Access GUI:** Open your browser to `http://localhost:5000`
+2.  **First Run:** Click the **Gear Icon** ⚙️ next to your username to select a target DM thread (create a group with yourself or an alt account).
+3.  **Upload:** Drag & drop files into the dashboard.
+4.  **Download:** Select files and click Download.
+
+**Docker Management:**
+```bash
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# Run CLI instead
+docker-compose exec app python cli.py
+```
+
+### Without Docker
+
+#### Option A: Graphical Interface (GUI)
 The recommended way to use DoodleCloud.
 
 1.  Run the web server:
@@ -66,7 +128,7 @@ The recommended way to use DoodleCloud.
 4.  **Upload:** Drag & drop files into the dashboard.
 5.  **Download:** Select files and click Download.
 
-### Option B: Command Line (CLI)
+#### Option B: Command Line (CLI)
 For power users or headless servers.
 
 1.  Run the CLI tool:

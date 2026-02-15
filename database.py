@@ -6,13 +6,17 @@ from config_loader import CONF
 
 def get_connection():
     try:
+        # Use SSL for external services, disable for local Docker
+        db_host = CONF.get("DB_HOST")
+        sslmode = 'disable' if db_host in ['localhost', '127.0.0.1', 'postgres'] else 'require'
+
         return psycopg2.connect(
-            host=CONF.get("DB_HOST"),
+            host=db_host,
             database=CONF.get("DB_NAME"),
             user=CONF.get("DB_USER"),
             password=CONF.get("DB_PASS"),
             port=CONF.get("DB_PORT"),
-            sslmode='require'
+            sslmode=sslmode
         )
     except: return None
 

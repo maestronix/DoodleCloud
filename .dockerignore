@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+venv
+env
+.venv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Local files
+config.env
+.env
+*.log
+
+# Temporary files
+upload/*
+download/*
+auth_cache/*
+
+# Keep directory structure
+!upload/.gitkeep
+!download/.gitkeep
+!auth_cache/.gitkeep
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

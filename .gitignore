@@ -1,8 +1,11 @@
 __pycache__/
 *.pyc
 config.env
+.env
 thread_cache.json
 upload/*
 download/*
+auth_cache/*
 !upload/.gitkeep
 !download/.gitkeep
+!auth_cache/.gitkeep

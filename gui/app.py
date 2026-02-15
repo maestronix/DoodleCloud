@@ -160,5 +160,8 @@ def delete_route():
     else: return jsonify({"error": "Database error"}), 500
 
 if __name__ == '__main__':
-    print(f"[*] Starting Web Interface on http://127.0.0.1:5000")
-    app.run(debug=True, use_reloader=False, port=5000)
+    # Use 0.0.0.0 for Docker, 127.0.0.1 for local development
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    port = int(os.environ.get('FLASK_PORT', '5000'))
+    print(f"[*] Starting Web Interface on http://{host}:{port}")
+    app.run(host=host, debug=True, use_reloader=False, port=port)
