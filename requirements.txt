@@ -4,3 +4,4 @@ numpy
 pillow
 psycopg2-binary
 requests
+pytest
