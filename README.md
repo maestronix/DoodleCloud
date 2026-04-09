@@ -1,163 +1,47 @@
 # DoodleCloud ☁️
 
-> **Turn Instagram into your personal, infinite cloud storage.**
+> **Instagram/CDN-backed virtual storage with range reads and WebDAV exposure.**
 
-DoodleCloud is a Proof-of-Concept (PoC) tool that uses Instagram's internal API to store unlimited files for free. By converting files into "Visual Noise" images and uploading them as DM doodles, we can bypass file type restrictions and use Instagram's servers as a backend.
+DoodleCloud now focuses on a storage-core architecture suitable for streaming and mounted workloads (for example, rclone over WebDAV), while still using Instagram-hosted doodle media as the remote chunk backend.
 
-![DoodleCloud GUI](https://iili.io/fbvVGPS.jpg)
+## What changed
 
-## 🚀 How It Works
+- Added a proper metadata index with file paths and per-chunk offset mapping (`dc_files`, `dc_chunks`).
+- Added a **CacheFS metadata layer** that preloads postgres metadata/chunk index on startup and serves reads from memory.
+- Added a range-capable file reader that fetches only required chunks.
+- Added chunk cache with bounded size + optional TTL eviction.
+- Added ingest service that stores chunk metadata with byte offsets.
+- Added protocol module (`protocol/webdav_server.py`) exposing byte-range reads for rclone-compatible WebDAV clients.
+- Added WebDAV `PUT` and `DELETE` paths to delegate writes/deletes through storage-core operations.
 
-1.  **The Loophole:** Instagram allows users to send "doodles" in Direct Messages. These are essentially PNG images hosted on Facebook's CDN.
-2.  **Encoding:** DoodleCloud takes any file (MP3, APK, ZIP, etc.) and converts its binary data into pixels, creating a "Visual Noise" PNG.
-3.  **Chunking:** Large files are split into 20MB chunks to ensure high reliability and bypass resolution limits.
-4.  **Storage:** These images are uploaded to a private DM thread. The file metadata (filenames, chunk IDs) is stored in a **PostgreSQL** database.
-5.  **Retrieval:** When you download a file, the tool fetches the images, reads the pixels back into bytes, and stitches them together to restore your original file perfectly.
+## Core modules
 
-## 📦 Features
+- `storage_core/metadata_store.py` – metadata/index layer.
+- `storage_core/cachefs.py` – in-memory metadata cachefs index.
+- `storage_core/chunk_store.py` – Instagram/CDN chunk fetch/store adapter.
+- `storage_core/range_reader.py` – range-to-chunk mapping, stitching, read-ahead.
+- `storage_core/cache.py` – LRU chunk cache.
+- `storage_core/ingest.py` – file writer/ingest pipeline.
+- `protocol/webdav_server.py` – external protocol layer.
 
-* **Infinite Storage:** No caps, assuming Instagram doesn't patch the API.
-* **Any File Type:** Stores `.exe`, `.apk`, `.mp4`, `.zip`, etc.
-* **Database Indexed:** Keeps track of your files remotely using PostgreSQL (NeonDB recommended).
-* **Encryption:** Basic obfuscation via image conversion.
-* **Dual Interface:**
-    * **CLI:** Fast, terminal-based management.
-    * **GUI:** Modern Web Dashboard.
+## Running the WebDAV service
 
-## 🛠️ Installation
-
-### Option A: Docker (Recommended)
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/depreciating/DoodleCloud.git
-    cd DoodleCloud
-    ```
-
-2.  **Configure Environment:**
-    Copy the example environment file and edit it with your credentials:
-    ```bash
-    cp .env.example .env
-    ```
-
-    Edit `.env` with your Instagram credentials and database password:
-    ```env
-    # Instagram Credentials
-    INSTA_USER=your_username
-    INSTA_PASS=your_password
-
-    # PostgreSQL Database (automatically configured)
-    DB_NAME=doodlecloud
-    DB_USER=doodlecloud
-    DB_PASS=your_secure_password
-    ```
-
-3.  **Start with Docker Compose:**
-    ```bash
-    docker-compose up -d
-    ```
-
-4.  **Access the GUI:**
-    Open your browser to: `http://localhost:5000`
-
-### Option B: Manual Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/depreciating/DoodleCloud.git
-    cd DoodleCloud
-    ```
-
-2.  **Install Dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3.  **Configure Environment:**
-    Create a file named `config.env` in the root folder and add your credentials:
-    ```env
-    # Instagram Credentials
-    INSTA_USER=your_username
-    INSTA_PASS=your_password
-
-    # PostgreSQL Database (Neon.tech is free & recommended)
-    DB_HOST=your-db-host.neon.tech
-    DB_NAME=neondb
-    DB_USER=your_db_user
-    DB_PASS=your_db_password
-    DB_PORT=5432
-    ```
-
-## 🖥️ Usage
-
-### With Docker
-
-Once running with `docker-compose up -d`:
-
-1.  **Access GUI:** Open your browser to `http://localhost:5000`
-2.  **First Run:** Click the **Gear Icon** ⚙️ next to your username to select a target DM thread (create a group with yourself or an alt account).
-3.  **Upload:** Drag & drop files into the dashboard.
-4.  **Download:** Select files and click Download.
-
-**Docker Management:**
 ```bash
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Restart services
-docker-compose restart
-
-# Run CLI instead
-docker-compose exec app python cli.py
+python protocol/webdav_server.py
 ```
 
-### Without Docker
+Default endpoint: `http://127.0.0.1:8080/dav`
 
-#### Option A: Graphical Interface (GUI)
-The recommended way to use DoodleCloud.
+## Testing
 
-1.  Run the web server:
-    ```bash
-    python gui/app.py
-    ```
-2.  Open your browser to: `http://127.0.0.1:5000`
-3.  **First Run:** Click the **Gear Icon** ⚙️ next to your username to select a target DM thread (create a group with yourself or an alt account).
-4.  **Upload:** Drag & drop files into the dashboard.
-5.  **Download:** Select files and click Download.
+```bash
+pytest -q
+```
 
-#### Option B: Command Line (CLI)
-For power users or headless servers.
+The tests validate path lookup, byte-range mapping, chunk-boundary reads, random seeks, cache behavior, and error handling.
 
-1.  Run the CLI tool:
-    ```bash
-    python cli.py
-    ```
-2.  Follow the interactive menu to Upload, Retrieve, or Delete files.
-    * *Note: Files to upload must be placed in the `upload/` folder.*
-    * *Note: Downloaded files will appear in the `download/` folder.*
+## Notes on limitations
 
-## ⚠️ Disclaimer & Warning
+Instagram/CDN remote fetch latency and API reliability remain fundamental constraints. The new architecture makes behavior correct and debuggable while minimizing remote reads through range fetching + cache.
 
-This project is a **Proof-of-Concept (PoC) steganographic experiment** and is for **Educational Purposes Only**.
-
-* **Terms of Service:** Using this tool violates Instagram's/Meta's Terms of Service. Automated use of the Doodle API is not officially supported and can lead to immediate account suspension or permanent bans.
-* **Burner Accounts Only:** **DO NOT** use your primary Instagram account. Use a dedicated burner account for any testing or usage.
-* **Data Reliability:** This is an experimental storage method, not a replacement for professional cloud services. Instagram may patch this loophole, clear DM caches, or delete "doodles" at any time without notice. Never upload data that you cannot afford to lose.
-* **Privacy & Encryption:** While files are converted into visual pixels, they are **not encrypted** by default. Meta's automated systems may still analyze these images. For true privacy, you must encrypt your files locally before uploading them to the system.
-* **No Liability:** The author is not responsible for any banned accounts, loss of data, or legal consequences resulting from the use of this software.
-
-## 🤝 Contributing
-
-Contributions are welcome! If you have found a bug, want to add a new feature, or improve the documentation, feel free to open an issue or submit a pull request. 
-
-If you have any questions or would like to discuss the project, feel free to contact me through the platforms below.
-
-## 👨‍💻 Credits
-
-**Created by [Depreciating](https://github.com/depreciating)**
-
-* **Telegram:** [@depreciatin](https://t.me/depreciatin)
-* **Discord Server:** [Server Link](https://discord.gg/YNHkj9kVFt)
+Remote chunk hard-delete is still backend-limited by upstream API behavior; metadata delete is supported and immediate.
